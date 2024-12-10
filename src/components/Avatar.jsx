@@ -187,13 +187,40 @@ export function Avatar() {
 
   // tambahkan pencahayaan
   useEffect(() => {
-    const light = new THREE.DirectionalLight(0xffffff, 0.45);
-    light.position.set(5, 5, 5);
-    light.castShadow = true;
-    group.current.add(light);
+    // Pencahayaan utama (sisi terang) - simulasi cahaya matahari
+    const mainLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
+    mainLight.position.set(4, 4, 2);
+    mainLight.castShadow = true;
+    mainLight.shadow.mapSize.width = 2048;
+    mainLight.shadow.mapSize.height = 2048;
+    mainLight.shadow.camera.near = 0.5;
+    mainLight.shadow.camera.far = 500;
+    mainLight.shadow.bias = -0.0001;
+    group.current.add(mainLight);
 
-    const ambientLight = new THREE.AmbientLight(0x404040);
+    // Pencahayaan sekunder (sisi gelap) - simulasi cahaya pantulan
+    const fillLight = new THREE.DirectionalLight(0xb6ceff, 0.4);
+    fillLight.position.set(-3, 2, -2);
+    fillLight.castShadow = true;
+    group.current.add(fillLight);
+
+    // Ambient light untuk detail bayangan
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
     group.current.add(ambientLight);
+
+    // Rim light untuk dimensi dan pemisahan dari background
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    rimLight.position.set(0, 3, -5);
+    group.current.add(rimLight);
+
+    // Tambahan soft light untuk mata dan detail wajah
+    const eyeLight = new THREE.SpotLight(0xffffff, 0.6);
+    eyeLight.position.set(0, 2, 3);
+    eyeLight.angle = Math.PI / 6;
+    eyeLight.penumbra = 1;
+    eyeLight.decay = 2;
+    eyeLight.distance = 10;
+    group.current.add(eyeLight);
   }, []);
 
   // manage audio playback
@@ -287,7 +314,7 @@ export function Avatar() {
 
   return (
     <Suspense fallback={<Html>Loading...</Html>}>
-      <group ref={group} dispose={null} position={[0, -0.22, 4.5]}>
+      <group ref={group} dispose={null} position={[0, -0.21, 4.3]}>
         <primitive object={nodes.Hips} />
         <skinnedMesh
           name="EyeLeft"
