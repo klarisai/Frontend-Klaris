@@ -287,7 +287,7 @@ export function Avatar() {
 
   return (
     <Suspense fallback={<Html>Loading...</Html>}>
-      <group ref={group} dispose={null} position={[0, -0.18, 4.2]}>
+      <group ref={group} dispose={null} position={[0, -0.22, 4.5]}>
         <primitive object={nodes.Hips} />
         <skinnedMesh
           name="EyeLeft"
@@ -354,35 +354,114 @@ export function Avatar() {
       </group>
 
       {/* Voice chat interface */}
-      <Html position={[0, -2, 0]} style={{ pointerEvents: 'auto' }}>
+      <Html position={[0, -2.5, 0]} style={{ pointerEvents: 'auto' }}>
         <div style={{
           position: 'absolute',
-          bottom: '20px',
+          bottom: '30px',
           left: '50%',
           transform: 'translateX(-50%)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '10px'
+          gap: '20px'
         }}>
-          <button
-            onClick={toggleListening}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: isListening ? '#e74c3c' : '#2ecc71',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer'
-            }}
-            disabled={isPlaying}
-          >
-            {isListening ? 'Stop Recording' : 'Start Recording'}
-          </button>
-          
-          {isListening && <div>Listening...</div>}
-          {loading && <div>Processing...</div>}
-          {error && <div style={{ color: 'red' }}>{error}</div>}
+          <div style={{ position: 'relative', minHeight: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <button
+              onClick={toggleListening}
+              style={{
+                width: '55px',
+                height: '55px',
+                backgroundColor: isListening ? 'rgba(231, 76, 60, 0.9)' : 'rgba(46, 204, 113, 0.9)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                zIndex: 1,
+                transition: 'all 0.3s ease',
+                transform: isListening ? 'scale(1.1)' : 'scale(1)',
+              }}
+              disabled={isPlaying}
+              onMouseEnter={(e) => e.target.style.transform = isListening ? 'scale(1.15)' : 'scale(1.05)'}
+              onMouseLeave={(e) => e.target.style.transform = isListening ? 'scale(1.1)' : 'scale(1)'}
+            >
+              {isListening ? (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" fill="white"/>
+                  <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" fill="white"/>
+                  <circle cx="12" cy="12" r="11" stroke="white" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.6">
+                    <animateTransform
+                      attributeName="transform"
+                      attributeType="XML"
+                      type="rotate"
+                      from="0 12 12"
+                      to="360 12 12"
+                      dur="4s"
+                      repeatCount="indefinite"
+                    />
+                  </circle>
+                </svg>
+              ) : (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" fill="white"/>
+                  <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" fill="white"/>
+                </svg>
+              )}
+            </button>
+            
+            <div style={{ position: 'absolute', top: '80px', width: '100%', display: 'flex', justifyContent: 'center' }}>
+              {isListening && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: '#fff'
+                }}>
+                  <div style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: '#e74c3c',
+                    animation: 'pulse 1s infinite'
+                  }}/>
+                  Mendengarkan...
+                </div>
+              )}
+              {loading && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: '#fff'
+                }}>
+                  <div style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: '#f1c40f',
+                    animation: 'pulse 1s infinite'
+                  }}/>
+                  Memproses...
+                </div>
+              )}
+            </div>
+          </div>
+          <style>
+            {`
+              @keyframes pulse {
+                0% { opacity: 1; }
+                50% { opacity: 0.4; }
+                100% { opacity: 1; }
+              }
+              @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-10px) translateX(-50%); }
+                to { opacity: 1; transform: translateY(0) translateX(-50%); }
+              }
+            `}
+          </style>
         </div>
       </Html>
     </Suspense>
