@@ -1,10 +1,10 @@
-import React, { useRef, useEffect, Suspense } from "react";
+import React, { useRef, useEffect, useState, Suspense, useCallback } from "react";
 import { useGLTF, useFBX, Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from 'three';
-import useAvatarStore from "../store/avatarStore";
+import axios from 'axios';
 
-// Viseme mapping for lip sync
+// viseme mapping untuk lip sync
 const corresponding = {
   A: "viseme_PP",
   B: "viseme_kk", 
@@ -17,57 +17,153 @@ const corresponding = {
   X: "viseme_PP",
 };
 
+// custom hook untuk state avatar
+const useAvatarStore = () => {
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [lipSyncData, setLipSyncData] = useState([]);
+  const [conversation, setConversation] = useState([]);
+
+  return {
+    audioUrl,
+    isPlaying,
+    lipSyncData,
+    conversation,
+    setAudioUrl,
+    setIsPlaying,
+    setLipSyncData,
+    setConversation
+  };
+};
+
 export function Avatar() {
   const audioRef = useRef(null);
   const group = useRef();
   const mixerRef = useRef();
-  const fileInputRef = useRef(null);
+  const recognitionRef = useRef(null);
   const idleActionRef = useRef(null);
   const talkActionRef = useRef(null);
+
+  // States
+  const [isListening, setIsListening] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   // Store states
   const { 
     audioUrl, 
     isPlaying,
     lipSyncData,
+    conversation,
     setAudioUrl,
     setLipSyncData,
-    setIsPlaying
+    setIsPlaying,
+    setConversation
   } = useAvatarStore();
 
-  // Handle audio file upload
-  const handleAudioUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setAudioUrl(url);
-      
-      // Generate longer lip sync data that covers the whole audio duration
-      const dummyLipSyncData = [];
-      const duration = 30; // Assuming 10 seconds duration
-      const interval = 0.2; // 200ms per viseme
-      
-      for(let time = 0; time < duration; time += interval) {
-        dummyLipSyncData.push({
-          start: time,
-          end: time + interval,
-          viseme: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'][Math.floor(Math.random() * 8)],
-          weight: 0.8 + Math.random() * 0.2 // Random weight between 0.8 and 1
-        });
+  // Process audio file with lip sync
+  const processAudioFile = (url) => {
+    setAudioUrl(url);
+    
+    // Generate dummy lip sync data (replace with actual lip sync generation in production)
+    const dummyLipSyncData = [];
+    const duration = 30;
+    const interval = 0.2;
+    
+    for(let time = 0; time < duration; time += interval) {
+      dummyLipSyncData.push({
+        start: time,
+        end: time + interval,
+        viseme: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'][Math.floor(Math.random() * 8)],
+        weight: 0.8 + Math.random() * 0.2
+      });
+    }
+    
+    setLipSyncData(dummyLipSyncData);
+  };
+
+  const addToConversation = (role, message) => {
+    setConversation(prev => [...prev, { role, message }]);
+  };
+
+  const sendQueryToBackend = async (query) => {
+    setLoading(true);
+    setAudioUrl('');
+    setError('');
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:5000';
+      const result = await axios.post(`${backendUrl}/api/query`, { query });
+      const answer = result.data.answer || 'Answer not available.';
+      addToConversation('assistant', answer);
+      if (result.data.audio_file) {
+        const audioUrl = `${backendUrl}/api/audio/${result.data.audio_file}`;
+        processAudioFile(audioUrl);
       }
-      
-      setLipSyncData(dummyLipSyncData);
+    } catch (error) {
+      console.error('Server Error:', error);
+      setError('Error connecting to server. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Load models and animations
+  const handleSpeechResult = useCallback((event) => {
+    const transcript = event.results[0][0].transcript;
+    setIsListening(false);
+    addToConversation('user', transcript);
+    sendQueryToBackend(transcript);
+  }, []);
+
+  // inisialisasi speech recognition
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.lang = 'id-ID';
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+
+      recognitionRef.current.onresult = handleSpeechResult;
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech recognition error', event.error);
+        setIsListening(false);
+        if (event.error === 'no-speech') {
+          setError('No speech detected. Please try speaking again.');
+          // otomatis berhenti setelah error no-speech
+          recognitionRef.current.stop();
+        } else {
+          setError('Speech recognition error. Please try again.');
+        }
+      };
+    } else {
+      setError('Speech recognition not supported in this browser.');
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, [handleSpeechResult]);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      setError(''); // hapus error sebelumnya
+      recognitionRef.current.start();
+    }
+    setIsListening(!isListening);
+  };
+
+  // load model dan animasi
   const gltf = useGLTF("/models/66de6b33bb9d79984d437c2f.glb", true);
   const { nodes, materials } = gltf;
 
   const { animations: standardAnim } = useFBX("/animations/Standard Idle.fbx");
   const { animations: talkingAnim } = useFBX("/animations/Talking.fbx");
 
-  // Setup animations and mixers
+  // setup animasi dan mixer
   useEffect(() => {
     if (group.current && standardAnim.length > 0) {
       mixerRef.current = new THREE.AnimationMixer(group.current);
@@ -82,7 +178,6 @@ export function Avatar() {
       }
     }
 
-    // Cleanup function
     return () => {
       if (mixerRef.current) {
         mixerRef.current.stopAllAction();
@@ -90,7 +185,7 @@ export function Avatar() {
     };
   }, [standardAnim, talkingAnim]);
 
-  // Add lighting
+  // tambahkan pencahayaan
   useEffect(() => {
     const light = new THREE.DirectionalLight(0xffffff, 0.45);
     light.position.set(5, 5, 5);
@@ -101,7 +196,7 @@ export function Avatar() {
     group.current.add(ambientLight);
   }, []);
 
-  // Manage audio playback
+  // manage audio playback
   useEffect(() => {
     if (audioUrl) {
       const audio = new Audio(audioUrl);
@@ -110,9 +205,7 @@ export function Avatar() {
       audio.addEventListener("play", () => {
         setIsPlaying(true);
         if (mixerRef.current && talkActionRef.current && idleActionRef.current) {
-          // Fade out idle animation smoothly
           idleActionRef.current.fadeOut(0.5);
-          // Fade in talking animation smoothly
           talkActionRef.current.reset().fadeIn(0.5).play();
         }
       });
@@ -120,51 +213,21 @@ export function Avatar() {
       audio.addEventListener("ended", () => {
         setIsPlaying(false);
         if (mixerRef.current && idleActionRef.current && talkActionRef.current) {
-          // Smoothly transition from talking to idle
           talkActionRef.current.fadeOut(0.8);
           idleActionRef.current.reset().fadeIn(0.8).play();
           
           setTimeout(() => {
-            // Reset all visemes gradually
             if (nodes.Wolf3D_Head && nodes.Wolf3D_Teeth) {
               Object.values(corresponding).forEach((value) => {
                 if (nodes.Wolf3D_Head.morphTargetDictionary[value] !== undefined) {
-                  const currentValue = nodes.Wolf3D_Head.morphTargetInfluences[
+                  nodes.Wolf3D_Head.morphTargetInfluences[
                     nodes.Wolf3D_Head.morphTargetDictionary[value]
-                  ];
-                  // Gradually reduce the influence
-                  const reduceInfluence = setInterval(() => {
-                    nodes.Wolf3D_Head.morphTargetInfluences[
-                      nodes.Wolf3D_Head.morphTargetDictionary[value]
-                    ] *= 0.9;
-                    if (nodes.Wolf3D_Head.morphTargetInfluences[
-                      nodes.Wolf3D_Head.morphTargetDictionary[value]
-                    ] < 0.01) {
-                      nodes.Wolf3D_Head.morphTargetInfluences[
-                        nodes.Wolf3D_Head.morphTargetDictionary[value]
-                      ] = 0;
-                      clearInterval(reduceInfluence);
-                    }
-                  }, 50);
+                  ] = 0;
                 }
                 if (nodes.Wolf3D_Teeth.morphTargetDictionary[value] !== undefined) {
-                  const currentValue = nodes.Wolf3D_Teeth.morphTargetInfluences[
+                  nodes.Wolf3D_Teeth.morphTargetInfluences[
                     nodes.Wolf3D_Teeth.morphTargetDictionary[value]
-                  ];
-                  // Gradually reduce the influence
-                  const reduceInfluence = setInterval(() => {
-                    nodes.Wolf3D_Teeth.morphTargetInfluences[
-                      nodes.Wolf3D_Teeth.morphTargetDictionary[value]
-                    ] *= 0.9;
-                    if (nodes.Wolf3D_Teeth.morphTargetInfluences[
-                      nodes.Wolf3D_Teeth.morphTargetDictionary[value]
-                    ] < 0.01) {
-                      nodes.Wolf3D_Teeth.morphTargetInfluences[
-                        nodes.Wolf3D_Teeth.morphTargetDictionary[value]
-                      ] = 0;
-                      clearInterval(reduceInfluence);
-                    }
-                  }, 50);
+                  ] = 0;
                 }
               });
             }
@@ -176,7 +239,7 @@ export function Avatar() {
     }
   }, [audioUrl]);
 
-  // Lip sync and animation update
+  // lip sync dan animasi update
   useFrame((state, delta) => {
     if (mixerRef.current) {
       mixerRef.current.update(delta);
@@ -191,7 +254,6 @@ export function Avatar() {
     );
 
     if (nodes.Wolf3D_Head && nodes.Wolf3D_Teeth) {
-      // First reset all visemes to a small value
       Object.values(corresponding).forEach((value) => {
         if (nodes.Wolf3D_Head.morphTargetDictionary[value] !== undefined) {
           nodes.Wolf3D_Head.morphTargetInfluences[
@@ -291,8 +353,8 @@ export function Avatar() {
         />
       </group>
 
-      {/* Audio upload interface */}
-      <Html position={[0, -1.5, 0]} style={{ pointerEvents: 'auto' }}>
+      {/* Voice chat interface */}
+      <Html position={[0, -2, 0]} style={{ pointerEvents: 'auto' }}>
         <div style={{
           position: 'absolute',
           bottom: '20px',
@@ -303,33 +365,31 @@ export function Avatar() {
           alignItems: 'center',
           gap: '10px'
         }}>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="audio/*"
-            onChange={handleAudioUpload}
-            style={{ display: 'none' }}
-          />
           <button
-            onClick={() => fileInputRef.current.click()}
+            onClick={toggleListening}
             style={{
               padding: '10px 20px',
-              backgroundColor: '#3498db',
+              backgroundColor: isListening ? '#e74c3c' : '#2ecc71',
               color: 'white',
               border: 'none',
               borderRadius: '5px',
               cursor: 'pointer'
             }}
+            disabled={isPlaying}
           >
-            Upload Audio
+            {isListening ? 'Stop Recording' : 'Start Recording'}
           </button>
+          
+          {isListening && <div>Listening...</div>}
+          {loading && <div>Processing...</div>}
+          {error && <div style={{ color: 'red' }}>{error}</div>}
         </div>
       </Html>
     </Suspense>
   );
 }
 
-// Preload models and animations
+// preload model dan animasi
 useGLTF.preload("/models/66de6b33bb9d79984d437c2f.glb");
 useFBX.preload("/animations/Standard Idle.fbx");
 useFBX.preload("/animations/Talking.fbx");
