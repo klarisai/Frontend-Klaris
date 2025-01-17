@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, Suspense, useCallback } from "react";
+import { useRef, useEffect, useState, Suspense, useCallback } from "react";
 import { useGLTF, useFBX, Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from 'three';
@@ -7,7 +7,7 @@ import axios from 'axios';
 // Viseme mapping for lip sync
 const VISEME_MAP = {
     A: "viseme_PP",
-    B: "viseme_kk", 
+    B: "viseme_kk",
     C: "viseme_I",
     D: "viseme_AA",
     E: "viseme_O",
@@ -74,10 +74,8 @@ export function Avatar() {
     // State
     const [isListening, setIsListening] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [, setError] = useState(''); // Menghapus variabel error karena tidak digunakan
     const [blink, setBlink] = useState(false);
-    const [winkLeft, setWinkLeft] = useState(false);
-    const [winkRight, setWinkRight] = useState(false);
     const [facialExpression, setFacialExpression] = useState("bigSmile");
     const [smileIntensity, setSmileIntensity] = useState(1);
 
@@ -86,7 +84,6 @@ export function Avatar() {
         audioUrl,
         isPlaying,
         lipSyncData,
-        conversation,
         setAudioUrl,
         setLipSyncData,
         setIsPlaying,
@@ -103,10 +100,10 @@ export function Avatar() {
             // Randomly choose between big and small smile
             const newExpression = Math.random() > 0.5 ? "bigSmile" : "smallSmile";
             setFacialExpression(newExpression);
-            
+
             // Random intensity variation
             setSmileIntensity(0.7 + Math.random() * 0.3);
-            
+
             // Set next update interval (between 2-5 seconds)
             smileTimerRef.current = setTimeout(updateSmile, 2000 + Math.random() * 3000);
         };
@@ -118,12 +115,12 @@ export function Avatar() {
     // Helper function for smooth morphing
     const lerpMorphTarget = (target, value, speed = 0.1) => {
         if (!groupRef.current) return;
-        
+
         groupRef.current.traverse((child) => {
             if (child.isSkinnedMesh && child.morphTargetDictionary) {
                 const index = child.morphTargetDictionary[target];
                 if (index === undefined || child.morphTargetInfluences[index] === undefined) return;
-                
+
                 child.morphTargetInfluences[index] = THREE.MathUtils.lerp(
                     child.morphTargetInfluences[index],
                     value * smileIntensity,
@@ -134,9 +131,9 @@ export function Avatar() {
     };
 
     // Process audio and generate lip sync data
-    const processAudioFile = (url) => {
+   const processAudioFile = useCallback((url) => {
         setAudioUrl(url);
-        
+
         // Generate temporary lip sync data with moderate values
         const tempLipSyncData = Array.from({ length: 150 }, (_, i) => ({
             start: i * 0.2,
@@ -146,15 +143,15 @@ export function Avatar() {
         }));
 
         setLipSyncData(tempLipSyncData);
-    };
+    }, [setAudioUrl]);
 
     // Add message to conversation
-    const addToConversation = (role, message) => {
+    const addToConversation = useCallback((role, message) => {
         setConversation(prev => [...prev, { role, message }]);
-    };
+    }, [setConversation]);
 
     // Send query to backend
-    const sendQueryToBackend = async (query, audioBlob) => {
+    const sendQueryToBackend = useCallback(async (query, audioBlob) => {
         setLoading(true);
         setAudioUrl('');
         setError('');
@@ -180,7 +177,7 @@ export function Avatar() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [addToConversation, processAudioFile, setAudioUrl, setError]);
 
     // Speech recognition handler
     const handleSpeechResult = useCallback((event) => {
@@ -190,36 +187,36 @@ export function Avatar() {
             addToConversation('user', transcript);
             sendQueryToBackend(transcript);
         }
-    }, []);
+    }, [addToConversation, sendQueryToBackend]);
 
     // Initialize speech recognition
     useEffect(() => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        
+
         if (SpeechRecognition) {
             recognitionRef.current = new SpeechRecognition();
             recognitionRef.current.lang = 'id-ID';
             recognitionRef.current.continuous = false;
             recognitionRef.current.interimResults = false;
             recognitionRef.current.onresult = handleSpeechResult;
-            
+
             recognitionRef.current.onerror = (event) => {
                 console.error('Speech Recognition Error:', event.error);
                 setIsListening(false);
-                setError(event.error === 'no-speech' 
+                setError(event.error === 'no-speech'
                     ? 'No speech detected. Please try again.'
                     : 'Speech recognition error. Please try again.');
-                
+
                 if (event.error === 'no-speech') {
                     recognitionRef.current?.stop();
                 }
             };
         } else {
-            setError('Speech recognition not supported in this browser.');
+           setError('Speech recognition not supported in this browser.');
         }
 
         return () => recognitionRef.current?.stop();
-    }, [handleSpeechResult]);
+    }, [handleSpeechResult, setError]);
 
     // Toggle listening state
     const toggleListening = async () => {
@@ -229,20 +226,20 @@ export function Avatar() {
         } else {
             setError('');
             chunksRef.current = [];
-            
+
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-                
+
                 mediaRecorderRef.current.ondataavailable = (event) => {
                     event.data.size > 0 && chunksRef.current.push(event.data);
                 };
-                
+
                 mediaRecorderRef.current.onstop = () => {
                     const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
                     sendQueryToBackend('', audioBlob);
                 };
-                
+
                 mediaRecorderRef.current.start();
                 recognitionRef.current?.start();
             } catch (err) {
@@ -252,7 +249,7 @@ export function Avatar() {
                 return;
             }
         }
-        
+
         setIsListening(!isListening);
     };
 
@@ -260,7 +257,7 @@ export function Avatar() {
     useEffect(() => {
         if (groupRef.current && idleAnimations.length > 0) {
             mixerRef.current = new THREE.AnimationMixer(groupRef.current);
-            
+
             idleActionRef.current = mixerRef.current.clipAction(idleAnimations[0]);
             idleActionRef.current.play();
         }
@@ -328,14 +325,16 @@ export function Avatar() {
         groupRef.current.add(hairLight);
 
         return () => {
-            groupRef.current?.remove(mainLight);
-            groupRef.current?.remove(fillLight);
-            groupRef.current?.remove(ambientLight);
-            groupRef.current?.remove(rimLight);
-            groupRef.current?.remove(eyeLight1);
-            groupRef.current?.remove(eyeLight2);
-            groupRef.current?.remove(bounceLight);
-            groupRef.current?.remove(hairLight);
+            if (groupRef.current) {
+                groupRef.current.remove(mainLight);
+                groupRef.current.remove(fillLight);
+                groupRef.current.remove(ambientLight);
+                groupRef.current.remove(rimLight);
+                groupRef.current.remove(eyeLight1);
+                groupRef.current.remove(eyeLight2);
+                groupRef.current.remove(bounceLight);
+                groupRef.current.remove(hairLight);
+            }
         };
     }, []);
 
@@ -368,7 +367,7 @@ export function Avatar() {
         const handleError = (error) => {
             console.error("Audio Playback Error:", error);
             setIsPlaying(false);
-            setError("Error playing audio.");
+           setError("Error playing audio.");
             audioPlayOnceRef.current = false;
         };
 
@@ -388,12 +387,12 @@ export function Avatar() {
             audio.pause();
             audio.currentTime = 0;
         };
-    }, [audioUrl, nodes]);
+    }, [audioUrl, nodes, setIsPlaying, setError]);
 
     // Automatic blinking
     useEffect(() => {
         let blinkTimer;
-        
+
         const triggerBlink = () => {
             blinkTimer = setTimeout(() => {
                 setBlink(true);
@@ -414,14 +413,14 @@ export function Avatar() {
         mixerRef.current?.update(delta);
 
         // Update eye blinks
-        lerpMorphTarget("eyeBlinkLeft", blink || winkLeft ? 1 : 0, 0.5);
-        lerpMorphTarget("eyeBlinkRight", blink || winkRight ? 1 : 0, 0.5);
+        lerpMorphTarget("eyeBlinkLeft", blink ? 1 : 0, 0.5);
+        lerpMorphTarget("eyeBlinkRight", blink ? 1 : 0, 0.5);
 
         // Update facial expressions
         if (nodes.EyeLeft?.morphTargetDictionary) {
             Object.keys(nodes.EyeLeft.morphTargetDictionary).forEach(key => {
                 if (key === "eyeBlinkLeft" || key === "eyeBlinkRight") return;
-                
+
                 const expression = FACIAL_EXPRESSIONS[facialExpression];
                 lerpMorphTarget(key, expression?.[key] || 0, 0.1);
             });
@@ -471,7 +470,7 @@ export function Avatar() {
 
     return (
         <Suspense fallback={<Html>Loading...</Html>}>
-            <group ref={groupRef} dispose={null} position={[-0.3, -15, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={9.1}>
+            <group ref={groupRef} position={[-0.3, -15, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={9.1}>
                 <primitive object={nodes.Hips} />
                 <skinnedMesh
                     name="EyeLeft"
@@ -529,7 +528,7 @@ export function Avatar() {
                     geometry={nodes.Wolf3D_Outfit_Top.geometry}
                     material={materials.Wolf3D_Outfit_Top}
                     skeleton={nodes.Wolf3D_Outfit_Top.skeleton}
-                            />
+                />
             </group>
 
             {/* Voice chat interface */}
@@ -590,7 +589,7 @@ export function Avatar() {
                                 </svg>
                             )}
                         </button>
-                        
+
                         <div style={{ position: 'absolute', top: '80px', width: '100%', display: 'flex', justifyContent: 'center' }}>
                             {isListening && (
                                 <div style={{
