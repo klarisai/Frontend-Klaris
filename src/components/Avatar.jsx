@@ -91,8 +91,8 @@ export function Avatar() {
     } = useAvatarState();
 
     // Load 3D models and animations
-    const { nodes, materials } = useGLTF("/models/KlarisFix.glb");
-    const { animations: idleAnimations } = useFBX("/animations/idl.fbx");
+    const { nodes, materials } = useGLTF("/models/klaris2.glb");
+    const { animations: idleAnimations } = useFBX("/animations/id.fbx");
 
     // Dynamic smile effect
     useEffect(() => {
@@ -470,7 +470,7 @@ export function Avatar() {
 
     return (
         <Suspense fallback={<Html>Loading...</Html>}>
-            <group ref={groupRef} position={[-0.3, -15, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={9.1}>
+            <group ref={groupRef} position={[-0, -15, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={9.1}>
                 <primitive object={nodes.Hips} />
                 <skinnedMesh
                     name="EyeLeft"
@@ -647,5 +647,5 @@ export function Avatar() {
 }
 
 // Preload assets
-useGLTF.preload("/models/KlarisFix.glb");
-useFBX.preload("/animations/idl.fbx");
+useGLTF.preload("/models/klaris2.glb");
+useFBX.preload("/animations/id.fbx");
