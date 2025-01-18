@@ -78,6 +78,8 @@ export function Avatar() {
     const [blink, setBlink] = useState(false);
     const [facialExpression, setFacialExpression] = useState("bigSmile");
     const [smileIntensity, setSmileIntensity] = useState(1);
+    const [answerText, setAnswerText] = useState('');
+
 
     // Get avatar state from custom hook
     const {
@@ -155,6 +157,7 @@ export function Avatar() {
         setLoading(true);
         setAudioUrl('');
         setError('');
+        setAnswerText('');
 
         try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:5000';
@@ -167,6 +170,8 @@ export function Avatar() {
 
             const answer = response.data.answer || 'No answer available.';
             addToConversation('assistant', answer);
+            setAnswerText(answer);
+
 
             if (response.data.audio_file) {
                 processAudioFile(`${backendUrl}/api/audio/${response.data.audio_file}`);
@@ -269,60 +274,80 @@ export function Avatar() {
     useEffect(() => {
         if (!groupRef.current) return;
 
-        // Main directional light (key light)
-        const mainLight = new THREE.DirectionalLight(0xfff5e6, 2.0);
-        mainLight.position.set(4, 4, 2);
+        // Main directional light (key light) - Focused front light
+        const mainLight = new THREE.DirectionalLight(0xfff5e6, 1.6); // Slightly reduced intensity
+        mainLight.position.set(0, 2, 3); // Slightly closer and more centered
         mainLight.castShadow = true;
-        mainLight.shadow.mapSize.width = 4096;
-        mainLight.shadow.mapSize.height = 4096;
+        mainLight.shadow.mapSize.width = 2048;
+        mainLight.shadow.mapSize.height = 2048;
         mainLight.shadow.camera.near = 0.1;
         mainLight.shadow.camera.far = 1000;
         mainLight.shadow.bias = -0.00001;
         groupRef.current.add(mainLight);
 
-        // Fill light (softer blue tint)
-        const fillLight = new THREE.DirectionalLight(0xb6ceff, 0.8);
-        fillLight.position.set(-3, 2, -2);
+        // Fill light (softer blue tint) - Reduced intensity
+        const fillLight = new THREE.DirectionalLight(0xb6ceff, 0.3);
+        fillLight.position.set(-2, 1.5, -1.5); // Adjusted position
         fillLight.castShadow = true;
         groupRef.current.add(fillLight);
 
-        // Ambient light (improved color)
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
+        // Ambient light (subtle and soft) - Slightly reduced
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
         groupRef.current.add(ambientLight);
 
-        // Rim light (dramatic back lighting)
-        const rimLight = new THREE.DirectionalLight(0xffffff, 0.6);
-        rimLight.position.set(0, 3, -5);
+        // Rim light (dramatic back lighting) - Adjusted position
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.2);
+        rimLight.position.set(0, 2.5, -4);
         groupRef.current.add(rimLight);
 
-        // Eye lights (for catch lights in eyes)
-        const eyeLight1 = new THREE.SpotLight(0xffffff, 1.0);
-        eyeLight1.position.set(0, 2, 3);
+        // Eye lights (for catch lights in eyes) - Adjusted positions and intensity
+        const eyeLight1 = new THREE.SpotLight(0xffffff, 0.6);
+        eyeLight1.position.set(0.4, 2.1, 2.8);
         eyeLight1.angle = Math.PI / 6;
-        eyeLight1.penumbra = 1;
+        eyeLight1.penumbra = 0.7;
         eyeLight1.decay = 2;
-        eyeLight1.distance = 10;
+        eyeLight1.distance = 8;
         groupRef.current.add(eyeLight1);
 
-        const eyeLight2 = new THREE.SpotLight(0xffffff, 0.8);
-        eyeLight2.position.set(-2, 2, 3);
+        const eyeLight2 = new THREE.SpotLight(0xffffff, 0.4);
+        eyeLight2.position.set(-1.2, 2.1, 2.8);
         eyeLight2.angle = Math.PI / 8;
-        eyeLight2.penumbra = 1;
+        eyeLight2.penumbra = 0.7;
         eyeLight2.decay = 2;
-        eyeLight2.distance = 10;
+        eyeLight2.distance = 8;
         groupRef.current.add(eyeLight2);
 
-        // Bounce light (ground reflection)
-        const bounceLight = new THREE.DirectionalLight(0xfff5e6, 0.4);
-        bounceLight.position.set(0, -3, 2);
+         // Bounce light (ground reflection) - Reduced intensity
+        const bounceLight = new THREE.DirectionalLight(0xfff5e6, 0.15);
+        bounceLight.position.set(0, -2.5, 1.5);
         groupRef.current.add(bounceLight);
 
-        // Hair highlight
-        const hairLight = new THREE.SpotLight(0xfff5e6, 0.6);
-        hairLight.position.set(2, 5, -2);
+        // Hair highlight - Adjusted position and intensity
+        const hairLight = new THREE.SpotLight(0xfff5e6, 0.25);
+        hairLight.position.set(1.5, 4, -1.5);
         hairLight.angle = Math.PI / 4;
-        hairLight.penumbra = 0.5;
+        hairLight.penumbra = 0.4;
         groupRef.current.add(hairLight);
+
+        // Focused face light - Increased intensity and narrowed cone
+        const faceLight = new THREE.SpotLight(0xffffff, 1.3);
+        faceLight.position.set(0, 2.3, 2.5); // More focused position
+        faceLight.angle = Math.PI / 4; // Narrower angle
+        faceLight.penumbra = 0.2;
+        faceLight.decay = 2;
+        faceLight.distance = 4;
+        groupRef.current.add(faceLight);
+
+        // Additional soft light from the side
+        const sideLight = new THREE.DirectionalLight(0xffffff, 0.2);
+        sideLight.position.set(3, 2, 0);
+        groupRef.current.add(sideLight);
+
+        // Subtle top light
+        const topLight = new THREE.DirectionalLight(0xffffff, 0.15);
+        topLight.position.set(0, 4, 0);
+        groupRef.current.add(topLight);
+
 
         return () => {
             if (groupRef.current) {
@@ -334,6 +359,9 @@ export function Avatar() {
                 groupRef.current.remove(eyeLight2);
                 groupRef.current.remove(bounceLight);
                 groupRef.current.remove(hairLight);
+                groupRef.current.remove(faceLight);
+                groupRef.current.remove(sideLight);
+                groupRef.current.remove(topLight);
             }
         };
     }, []);
@@ -400,7 +428,7 @@ export function Avatar() {
                     setBlink(false);
                     triggerBlink();
                 }, 200); // Keep blink duration at 200ms for natural look
-            }, 5000); // Fixed 5 second interval between blinks
+            }, 5000 + Math.random() * 3000); // Randomize blink interval
         };
 
         triggerBlink();
@@ -533,6 +561,27 @@ export function Avatar() {
 
             {/* Voice chat interface */}
             <Html position={[0, -2.5, 0]} style={{ pointerEvents: 'auto' }}>
+                {/* Answer Display */}
+                {answerText && (
+                    <div style={{
+                        position: 'fixed',
+                        left: '-270px', 
+                        bottom: '140px',
+                        width: '200px',
+                        color: 'white', // Changed to white
+                        fontSize: '10px', // Made the font size smaller
+                        textAlign: 'left',
+                        wordWrap: 'break-word',
+                        animation: 'fadeIn 0.5s ease-out forwards',
+                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                        zIndex: 10,
+                        transform: 'translateX(0)'
+                    }}>
+                        {answerText}
+                    </div>
+                )}
+
+                {/* Record Button Interface */}
                 <div style={{
                     position: 'absolute',
                     bottom: '30px',
@@ -635,8 +684,8 @@ export function Avatar() {
                                 100% { opacity: 1; }
                             }
                             @keyframes fadeIn {
-                                from { opacity: 0; transform: translateY(-10px) translateX(-50%); }
-                                to { opacity: 1; transform: translateY(0) translateX(-50%); }
+                                from { opacity: 0; transform: translateX(-20px); }
+                                to { opacity: 1; transform: translateX(0); }
                             }
                         `}
                     </style>
