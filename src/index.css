@@ -5,40 +5,67 @@
 
   color-scheme: light dark;
   color: rgba(94, 16, 16, 0.87);
-  background: url('src/images/bg5.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  backdrop-filter: blur(4px); /* Reduced blur strength */
+  backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   position: relative;
-  min-height: 100vh; /* Ensure root covers full viewport height */
-  width: 100%; /* Ensure root covers full viewport width */
-  overflow: hidden; /* Prevent content from breaking blur effect */
+  min-height: 100vh;
+  width: 100%;
+  overflow: hidden;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --background-image-1: url('src/images/bg10.jpg');
+  --background-image-2: url('src/images/bg9.jpg');
+  --background-image-3: url('src/images/bg8.jpg');
+  --current-background: var(--background-image-1);
+  background-image: var(--current-background);
+  transition: background-image 1s ease-in-out;
+  
 }
+
+@keyframes changeBackground {
+  0%, 33.33% {
+    background-image: var(--background-image-1);
+  }
+  33.34%, 66.66% {
+    background-image: var(--background-image-2);
+  }
+  66.67%, 100% {
+    background-image: var(--background-image-3);
+  }
+}
+
+:root {
+    animation: changeBackground 28800s ease-in-out infinite;
+}
+
 
 :root::before {
   content: "";
-  position: fixed; /* Changed from absolute to fixed */
-  top: -20px; /* Extend slightly beyond viewport */
+  position: fixed;
+  top: -20px;
   left: -20px;
   right: -20px;
   bottom: -20px;
   background: inherit;
   filter: blur(4px);
   z-index: -1;
+  transition: filter 0.3s ease;
 }
 
 a {
   font-weight: 500;
   color: #646cff;
   text-decoration: inherit;
+  transition: color 0.3s ease;
 }
+
 a:hover {
   color: #535bf2;
 }
@@ -49,7 +76,7 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
-  overflow-x: hidden; /* Prevent horizontal scroll */
+  overflow-x: hidden;
 }
 
 h1 {
@@ -66,11 +93,13 @@ button {
   font-family: inherit;
   background-color: #1a1a1a;
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color 0.25s, background-color 0.25s;
 }
+
 button:hover {
   border-color: #646cff;
 }
+
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
@@ -81,10 +110,64 @@ button:focus-visible {
     color: #213547;
     background-color: #690f0f;
   }
+
   a:hover {
     color: #747bff;
   }
+
   button {
     background-color: #7e0f0f;
   }
+}
+
+/* Responsiveness for ConversationDisplay - Begin */
+.conversation-display {
+    position: fixed; /* Make position fixed */
+    left: 20px;
+    bottom: 20px;
+    max-width: 300px;
+    color: white;
+    font-size: 10px;
+    text-align: left;
+    word-wrap: break-word;
+    animation: fadeIn 0.5s ease-out forwards;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    z-index: 10;
+    transform: translateX(0);
+    white-space: pre-line;
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+    max-height: 60%; /* Set a maximum height */
+    overflow-y: auto; /* Enable vertical scrolling if content exceeds max-height */
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+
+@media (max-width: 768px) {
+    .conversation-display {
+      font-size: 9px;
+      max-width: 250px;
+    }
+}
+
+@media (max-width: 480px) {
+    .conversation-display {
+      font-size: 8px;
+      max-width: 200px;
+    }
+}
+/* Responsiveness for ConversationDisplay - End */
+
+/* Button Fix */
+button {
+    position: relative; /* make position relative */
+    z-index: 11; /* ensure button is above the conversation-display */
 }

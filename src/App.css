@@ -1,42 +1,36 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+.user-icon-container {
+  cursor: pointer;
+   pointer-events: auto; /* Ensure the user icon is clickable */
+    display: flex;
+    align-items: center;
+  margin-bottom: 5px;
+
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.user-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px; /* Adjust the width as needed */
+  height: 30px; /* Adjust the height as needed */
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.options-container {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1001;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+   align-items: flex-end;
+  padding: 10px;
+
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+.options-item {
+  pointer-events: auto; /* Ensure options items are clickable */
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
 }
